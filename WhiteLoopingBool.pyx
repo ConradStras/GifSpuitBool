@@ -11,9 +11,8 @@ red = (0, 0, 255)
 @cython.cdivision(False)
 cpdef whiteindex(unsigned char [:, :] image):
     cpdef int h, w, y, x
-    cdef float  z = 0.02, tenth = 0.1, tff = 255
+    cdef float  z = 0.01, tenth = 0.1, tff = 255
     cpdef int stepdown, stepacross
-    cpdef double stepdownreal
     w = image.shape[1]
     h = image.shape[0]
     indexes = []
@@ -41,7 +40,7 @@ def clusters(indexes, image):
                 if image[k, i] == 255:
                     ccount = ccount + 1
         ##!! Key Parameter, this determines whether the amount of green present in a block is worthy of being a cluster
-        threshold = int(1/45*(h*1/50*w*1/50))
+        threshold = int(1/30*(h*1/100*w*1/100))
         ##!! Key Parameter above
         if ccount > threshold:
             bzone = True

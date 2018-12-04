@@ -6,10 +6,12 @@ import argparse
 from collections import deque
 import imutils
 import pyximport
+
 pyximport.install()
-import  WhiteLoopingBool as wl
+import WhiteLoopingBool as wl
 import time
 import cython
+
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video",
                 help="path to the (optional) video file")
@@ -17,7 +19,7 @@ args = vars(ap.parse_args())
 # define the lower and upper boundaries of the "green"
 # ball in the HSV color space, then initialize the
 # list of tracked points
-#comparison mask
+# comparison mask
 greencompar = (20, 20, 20)
 greencomparup = (64, 255, 255)
 
@@ -43,14 +45,14 @@ while True:
     if args.get("video") and not grabbed:
         break
     # color space
+    # rotating the video to see it properly
     frame = imutils.resize(frame, width=600)
     frame = imutils.resize(frame, height=450)
-    # rotating the video to see it properly
     (h, w) = frame.shape[:2]
-    centerRot = (w / 2, h / 2)
-    #M = cv2.getRotationMatrix2D(centerRot, 180, 1.0)
-    #frame = cv2.warpAffine(frame, M, (w, h))
-    # blurred = cv2.GaussianBlur(frame, (11, 11), 0)q
+    # centerRot = (w / 2, h / 2)
+    # M = cv2.getRotationMatrix2D(centerRot, 180, 1.0)
+    # frame = cv2.warpAffine(frame, M, (w, h))
+    # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     # construct a mask for the color "green", then perform
     # a series of dilations and erosions to remove any small
@@ -59,30 +61,36 @@ while True:
     mask = cv2.erode(mask, None, iterations=2)
     mask = cv2.dilate(mask, None, iterations=2)
     # now to acquire the indexes of every green spot, read in order [y, x]
-    reddeningarray = np.zeros((360, 200, 3), dtype = "uint8")
-    reddeningarray[0:360, 0:200] = (0, 0, 55)
-    leftsection = mask[0:450, 0:200]
-    midsection = mask[0:450, 200:400]
-    rightsection = mask[0:450, 400:600]
+    reddeningarray = np.zeros((int(h * 8 / 10), int(w * 1 / 3), 3), dtype="uint8")
+    reddeningarray[:, :] = (0, 0, 55)
+    leftsection = mask[0:h, 0:int(w * 1 / 3)]
+    midsection = mask[0:h, int(w * 1 / 3):int(w * 2 / 3)]
+    rightsection = mask[0:h, int(w * 2 / 3):w]
+    indexall = wl.whiteindex(mask)
     index1 = wl.whiteindex(leftsection)
     index2 = wl.whiteindex(midsection)
     index3 = wl.whiteindex(rightsection)
     (cluster1, bzone1) = wl.clusters(index1, leftsection)
     (cluster2, bzone2) = wl.clusters(index2, midsection)
     (cluster3, bzone3) = wl.clusters(index3, rightsection)
+    (clusters, buseless) = wl.clusters(indexall, mask)
     for k in cluster1:
-        #cv2.rectangle(frame, (k[0][1], k[0][0]), (k[1][1], k[1][0]), (255, 0, 0))
         if bzone1 == True:
-            frame[45:405, 0:200] = cv2.add(frame[45:405, 0:200], reddeningarray)
+            frame[int(1 / 10 * h):int(9 / 10 * h), 0:int(w * 1 / 3)] = cv2.add(
+                frame[int(1 / 10 * h):int(9 / 10 * h), 0:int(w * 1 / 3)], reddeningarray)
             break
     for k in cluster2:
         if bzone2 == True:
-            frame[45:405, 200:400] = cv2.add(frame[45:405, 200:400], reddeningarray)
+            frame[int(1 / 10 * h):int(9 / 10 * h), int(w * 1 / 3):int(w * 2 / 3)] = cv2.add(
+                frame[int(1 / 10 * h):int(9 / 10 * h), int(w * 1 / 3):int(w * 2 / 3)], reddeningarray)
             break
     for k in cluster3:
         if bzone3 == True:
-            frame[45:405, 400:600] = cv2.add(frame[45:405, 400:600], reddeningarray)
+            frame[int(1 / 10 * h):int(9 / 10 * h), int(w * 2 / 3):w] = cv2.add(
+                frame[int(1 / 10 * h):int(9 / 10 * h), int(w * 2 / 3):w], reddeningarray)
             break
+    for k in clusters:
+        cv2.rectangle(frame, (k[0][1], k[0][0]), (k[1][1], k[1][0]), (255, 0, 0))
     cv2.line(frame, (0, int(h / 10)), (w, int(h / 10)), (0, 0, 255), 3)
     cv2.line(frame, (0, int(h * 9 / 10)), (w, int(h * 9 / 10)), (0, 0, 255), 3)
     # mask = cv2.erode(mask, None, iterations=2)
